@@ -1,0 +1,11 @@
+[package]
+name = "jumpcutter"
+version = "0.1.0"
+authors = ["Romain Déoux <romain.deoux@gmail.com>"]
+edition = "2018"
+
+[dependencies]
+clap = "2.33.3"
+log = "0.4.14"
+simple_logger = "1.11.0"
+tempfile = "3.2.0"
