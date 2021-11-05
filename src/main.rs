@@ -18,10 +18,10 @@ fn main() {
         .arg(Arg::with_name("input-file").required(true))
         .arg(Arg::with_name("output-file").required(true));
     let matches = app.get_matches();
-    let input_file = matches.value_of_os("input-file").unwrap_or_default();
-    let output_file = matches.value_of_os("output-file").unwrap_or_default();
+    let input_file = Path::new(matches.value_of_os("input-file").unwrap_or_default());
+    let output_file = Path::new(matches.value_of_os("output-file").unwrap_or_default());
 
-    if Path::new(&output_file).exists() {
+    if output_file.exists() {
         error!("{:?} already exists", output_file);
         exit(1)
     }
@@ -78,21 +78,7 @@ fn main() {
                             piece.push(format!("piece-{:08x}.mkv", uniq));
                             writeln!(concat_script, "file {}", piece.to_string_lossy())
                                 .expect("Failed to write");
-                            let status = Command::new("ffmpeg")
-                                .args(&["-ss", &silence_end.to_string()])
-                                .args(&["-t", &(silence_start - silence_end).to_string()])
-                                .arg("-i")
-                                .arg(&input_file)
-                                .arg(piece)
-                                .status()
-                                .unwrap_or_else(|err| {
-                                    error!("Failed to extract sub-video: {}", err);
-                                    exit(err.raw_os_error().unwrap_or(1))
-                                });
-                            if !status.success() {
-                                error!("Failed to extract a piece");
-                                exit(status.code().unwrap_or(1))
-                            }
+                            slice(silence_end, silence_start - silence_end, &input_file, piece);
                         }
                     }
                 }
@@ -109,12 +95,42 @@ fn main() {
     drop(concat_script); // Flush and close the script
 
     info!("Concatenate pieces");
+    concatenate(concat_script_path, output_file);
+}
+
+fn slice<I, O>(timestamp: f32, duration: f32, input: I, output: O)
+where
+    I: AsRef<Path>,
+    O: AsRef<Path>,
+{
+    let status = Command::new("ffmpeg")
+        .args(&["-ss", &timestamp.to_string()])
+        .args(&["-t", &duration.to_string()])
+        .arg("-i")
+        .arg(input.as_ref())
+        .arg(output.as_ref())
+        .status()
+        .unwrap_or_else(|err| {
+            error!("Failed to extract sub-video: {}", err);
+            exit(err.raw_os_error().unwrap_or(1))
+        });
+    if !status.success() {
+        error!("Failed to extract a piece");
+        exit(status.code().unwrap_or(1))
+    }
+}
+
+fn concatenate<I, O>(input: I, output: O)
+where
+    I: AsRef<Path>,
+    O: AsRef<Path>,
+{
     let status = Command::new("ffmpeg")
         .args(&["-f", "concat", "-safe", "0"])
         .arg("-i")
-        .arg(&concat_script_path)
+        .arg(input.as_ref())
         .args(&["-c", "copy"])
-        .arg(output_file)
+        .arg(output.as_ref())
         .status()
         .unwrap_or_else(|err| {
             error!("Failed to execute ffmpeg: {}", err);
