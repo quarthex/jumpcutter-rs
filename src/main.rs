@@ -29,8 +29,7 @@ fn main() {
     info!("Create temporary directory");
     let tempdir = matches
         .value_of_os("tempdir")
-        .map(tempfile::tempdir_in)
-        .unwrap_or_else(tempfile::tempdir)
+        .map_or_else(tempfile::tempdir, tempfile::tempdir_in)
         .unwrap_or_else(|err| {
             error!("Failed to create a temporary directory");
             exit(err.raw_os_error().unwrap_or(1))
