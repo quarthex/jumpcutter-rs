@@ -5,7 +5,7 @@ authors = ["Romain Déoux <romain.deoux@gmail.com>"]
 edition = "2018"
 
 [dependencies]
-clap = "2.33.3"
-log = "0.4.14"
-simple_logger = "1.11.0"
-tempfile = "3.2.0"
+clap = "3.1.18"
+log = "0.4.17"
+simple_logger = "2.1.0"
+tempfile = "3.3.0"

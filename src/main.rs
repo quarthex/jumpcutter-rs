@@ -1,4 +1,4 @@
-use clap::{App, AppSettings, Arg};
+use clap::Arg;
 use log::{debug, error, info};
 use simple_logger::SimpleLogger;
 use std::fs::{canonicalize, File};
@@ -8,15 +8,11 @@ use std::process::{exit, Command, Stdio};
 
 fn main() {
     SimpleLogger::new().init().unwrap_or_default();
-    let app = App::new("jumpcutter")
-        .setting(AppSettings::DontCollapseArgsInUsage)
-        .arg(
-            Arg::with_name("tempdir")
-                .long("--tempdir")
-                .takes_value(true),
-        )
-        .arg(Arg::with_name("input-file").required(true))
-        .arg(Arg::with_name("output-file").required(true));
+    let app = clap::Command::new("jumpcutter")
+        .dont_collapse_args_in_usage(true)
+        .arg(Arg::new("tempdir").long("--tempdir").takes_value(true))
+        .arg(Arg::new("input-file").required(true))
+        .arg(Arg::new("output-file").required(true));
     let matches = app.get_matches();
     let input_file = Path::new(matches.value_of_os("input-file").unwrap_or_default());
     let output_file = Path::new(matches.value_of_os("output-file").unwrap_or_default());
