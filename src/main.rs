@@ -1,30 +1,38 @@
-use clap::Arg;
+use clap::Parser;
 use log::{debug, error, info};
 use simple_logger::SimpleLogger;
 use std::fs::{canonicalize, File};
 use std::io::{BufRead, BufReader, Write};
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::process::{exit, Command, Stdio};
+
+#[derive(Parser)]
+#[command(version, author, about, dont_collapse_args_in_usage = true)]
+struct Args {
+    /// Temporary directory to use
+    #[clap(long)]
+    tempdir: Option<PathBuf>,
+
+    /// Input file path
+    input_file: PathBuf,
+
+    /// Output file path
+    output_file: PathBuf,
+}
 
 fn main() {
     SimpleLogger::new().init().unwrap_or_default();
-    let app = clap::Command::new("jumpcutter")
-        .dont_collapse_args_in_usage(true)
-        .arg(Arg::new("tempdir").long("--tempdir").takes_value(true))
-        .arg(Arg::new("input-file").required(true))
-        .arg(Arg::new("output-file").required(true));
-    let matches = app.get_matches();
-    let input_file = Path::new(matches.value_of_os("input-file").unwrap_or_default());
-    let output_file = Path::new(matches.value_of_os("output-file").unwrap_or_default());
+    let args = Args::parse();
 
-    if output_file.exists() {
-        error!("{:?} already exists", output_file);
+    if args.output_file.exists() {
+        error!("{:?} already exists", args.output_file);
         exit(1)
     }
 
     info!("Create temporary directory");
-    let tempdir = matches
-        .value_of_os("tempdir")
+    let tempdir = args
+        .tempdir
+        .as_ref()
         .map_or_else(tempfile::tempdir, tempfile::tempdir_in)
         .unwrap_or_else(|err| {
             error!("Failed to create a temporary directory");
@@ -39,10 +47,10 @@ fn main() {
         exit(err.raw_os_error().unwrap_or(1))
     });
     writeln!(&concat_script, "ffconcat version 1.0").expect("Failed to write");
-    let input_file = canonicalize(input_file).unwrap_or_else(|err| {
+    let input_file = canonicalize(&args.input_file).unwrap_or_else(|err| {
         error!(
             "Failed to get the canonical path of {:?}: {}",
-            input_file, err
+            args.input_file, err
         );
         exit(err.raw_os_error().unwrap_or(1))
     });
@@ -91,7 +99,7 @@ fn main() {
     drop(concat_script); // Flush and close the script
 
     info!("Concatenate pieces");
-    concatenate(concat_script_path, output_file);
+    concatenate(concat_script_path, args.output_file);
 }
 
 fn slice<I, O>(timestamp: f32, duration: f32, input: I, output: O)
