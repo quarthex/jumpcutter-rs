@@ -7,11 +7,16 @@ use std::path::{Path, PathBuf};
 use std::process::{exit, Command, Stdio};
 
 #[derive(Parser)]
-#[command(dont_collapse_args_in_usage = true)]
+#[command(version, author, about, dont_collapse_args_in_usage = true)]
 struct Args {
+    /// Temporary directory to use
     #[arg(long)]
     tempdir: Option<PathBuf>,
+
+    /// Input file path
     input_file: PathBuf,
+
+    /// Output file path
     output_file: PathBuf,
 }
 
